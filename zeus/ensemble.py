@@ -62,6 +62,10 @@ class EnsembleSampler:
                  check_walkers=True,
                  shuffle_ensemble=True,
                  light_mode=False,
+                 continue_sampling=False,
+                 save_after_iter=100,
+                 name = "test",
+                 param_names = None, #if provided, they will also be checked.
                  ):
 
         # Set up logger
