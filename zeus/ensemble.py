@@ -13,6 +13,7 @@ from .fwrapper import _FunctionWrapper
 from .autocorr import AutoCorrTime
 from .moves import DifferentialMove
 
+from HDFsupport import HDFStorage
 
 class EnsembleSampler:
     """
@@ -62,12 +63,17 @@ class EnsembleSampler:
                  check_walkers=True,
                  shuffle_ensemble=True,
                  light_mode=False,
+                 store_progress = True,
                  continue_sampling=False,
                  save_after_iter=100,
-                 name = "test",
+                 name = None,
+                 folder = r'./',
                  param_names = None, #if provided, they will also be checked.
                  ):
-
+        if continue_sampling and not store_progress:
+            raise ValueError("Need to store progress in order to continue sampling!")
+        if (continue_sampling and name is None) or (store_progress and name is None): #next open the chain?
+            raise ValueError("Need to give a name to continue sampling or store progress!")
         # Set up logger
         self.logger = logging.getLogger()
         for handler in self.logger.handlers[:]:
@@ -141,7 +147,25 @@ class EnsembleSampler:
 
         # Light mode
         self.light_mode = light_mode
+        self.continue_sampling = continue_sampling
 
+        if store_progress:
+            self.storage = self.Saver(
+                filename = folder + name,
+                name = name,
+            )
+
+
+    def Saver(self,):
+        """
+        Initializes #idea: initialzes hdf class and returns it.
+        Returns:
+
+        """
+        return HDFStorage(
+            filename = filename,
+            name = name,
+        )
 
     def run(self, *args, **kwargs):
         logging.warning('The run method has been deprecated and it will be removed. Please use the new run_mcmc method.')
@@ -153,6 +177,9 @@ class EnsembleSampler:
         Reset the state of the sampler. Delete any samples stored in memory.
         """
         self.samples = samples(self.ndim, self.nwalkers)
+
+        #reset also hdf storage
+        self.storage.reset(self.ndim, self.nwalkers)
     
 
     def get_chain(self, flat=False, thin=1, discard=0):
@@ -419,7 +446,11 @@ class EnsembleSampler:
                 This option is useful in cases in which sampling needs to terminate once
                 convergence is reached. Examples of callback functions can be found in the API docs.
         '''
-        
+        if self.continue_sampling:
+            if start is not None:
+                raise ValueError("Given a starting point, while continue sampling")
+            else:
+                start = self.storage.get_last_sample()
         for _ in self.sample(start,
                              log_prob0=log_prob0,
                              blobs0=blobs0,

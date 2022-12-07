@@ -6,7 +6,7 @@ class HDFStorage:
 
     def __init__(self, filename, name):
         if h5py is None:
-            raise ImportError("You must instal h5py to use HDFBackend.")
+            raise ImportError("You must install h5py to use HDFBackend.")
         self.filename = filename
         self.name = name
 
@@ -365,13 +365,13 @@ class HDFStorage:
 
     def get_last_sample(self):
         """
-        Access the most recent sample in hte chain.
+        Access the most recent sample in the chain.
 
         Returns
         -------
         coords : ndarray
             A list of the current positions of the walkers in the parameter space.
-            The shape of this object will ne ``(nwalkers, ndim)``.
+            The shape of this object will be ``(nwalkers, ndim)``.
         log_prob : list
             The list of log posterior probabilities for the walkers at positions given by
             ``coords``. The shape of this object is ``(nwalkers,)``.
