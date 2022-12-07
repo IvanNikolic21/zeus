@@ -13,7 +13,7 @@ from .fwrapper import _FunctionWrapper
 from .autocorr import AutoCorrTime
 from .moves import DifferentialMove
 
-from HDFsupport import HDFStorage
+from .HDFsupport import HDFStorage
 
 class EnsembleSampler:
     """
@@ -63,7 +63,7 @@ class EnsembleSampler:
                  check_walkers=True,
                  shuffle_ensemble=True,
                  light_mode=False,
-                 store_progress = True,
+                 store_progress = False,
                  continue_sampling=False,
                  save_after_iter=100,
                  name = None,
@@ -148,15 +148,23 @@ class EnsembleSampler:
         # Light mode
         self.light_mode = light_mode
         self.continue_sampling = continue_sampling
+        self.save_after_iter = save_after_iter
+        self.param_names = param_names
+        self.store_progress = store_progress
 
-        if store_progress:
+        if self.store_progress:
             self.storage = self.Saver(
                 filename = folder + name,
                 name = name,
             )
+            if not continue_sampling:
+                self.storage.reset(self.nwalkers, self.ndim)
+
+        if continue_sampling:
+            self.samples.add_previous(self.storage, has_blobs = blobs_dtype)
 
 
-    def Saver(self,):
+    def Saver(self, filename, name):
         """
         Initializes #idea: initialzes hdf class and returns it.
         Returns:
@@ -450,7 +458,16 @@ class EnsembleSampler:
             if start is not None:
                 raise ValueError("Given a starting point, while continue sampling")
             else:
-                start = self.storage.get_last_sample()
+                last_sample =  self.storage.get_last_sample()
+                if self.blobs_dtype is not None:
+                    start, log_prob0, rstate, blobs0 = last_sample
+                else:
+                    start, log_prob0, rstate = last_sample
+
+        if self.store_progress:
+            self.storage.grow(nsteps, self.blobs_dtype)
+
+
         for _ in self.sample(start,
                              log_prob0=log_prob0,
                              blobs0=blobs0,
@@ -736,6 +753,10 @@ class EnsembleSampler:
             # Save samples
             if (i+1) % self.ncheckpoint == 0:
                 self.samples.save(X, Z, blobs)
+                if self.store_progress:
+                    self.storage.save_step(
+                        X, Z, blobs,
+                    )
 
             # Update progress bar
             if progress:

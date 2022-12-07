@@ -1,4 +1,5 @@
 import numpy as np
+from .HDFsupport import HDFStorage
 
 class samples:
     '''
@@ -15,6 +16,20 @@ class samples:
         self.ndim = ndim
         self.nwalkers = nwalkers
 
+
+    def add_previous(self, storage, has_blobs = None):
+        """
+        Adds previous chain and blobs to the samples object.
+        """
+
+        self.initialised = True
+        self.samples = storage.get_chain()
+        self.logp = storage.get_log_prob()
+        if has_blobs is not None:
+            if not storage.has_blobs:
+                raise ValueError("Storage doesn't have blobs, but you requested them!")
+            self.blobs = storage.get_blobs()
+        self.index = np.shape(self.logp)[0]
 
     def extend(self, n, blobs):
         """

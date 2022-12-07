@@ -1,4 +1,5 @@
-import numpy
+import os
+import numpy as np
 import h5py
 
 class HDFStorage:
@@ -23,9 +24,9 @@ class HDFStorage:
 
     def open(self, mode="r"):
         """Open the backend file."""
-        return h5py.File(self.filaname, mode)
+        return h5py.File(self.filename, mode)
 
-    def reset(self, nwalkers, params):
+    def reset(self, nwalkers, ndim):
         """Clear the state of the chain and empty the backend.
 
         Parameters
@@ -50,7 +51,7 @@ class HDFStorage:
             g.attrs["iteration"] = 0
 
             g.create_dataset(
-                "accepted", (0,nwalkers), maxshape=(0,nwalkers), dtype=n.int
+                "accepted", (0,nwalkers), maxshape=(None,nwalkers), dtype=np.int
             )
             g.create_dataset(
                 "chain",
@@ -65,7 +66,7 @@ class HDFStorage:
                 dtype = np.float64
             )
             g.create_dataset(
-                "trial",
+                "trials",
                 (0, nwalkers, ndim),
                 maxshape = (None, nwalkers, ndim),
                 dtype = np.float64,
@@ -86,6 +87,7 @@ class HDFStorage:
         empty_blobs = self.get_blobs(discard=self.iteration)
         return empty_blobs.dtype.names
 
+    @property
     def has_blobs(self):
         """Whether this files has blobs in it."""
         with self.open() as f:
@@ -127,7 +129,7 @@ class HDFStorage:
             g = f[self.name]
             return g.attrs["nwalkers"], g.attrs["ndim"]
 
-    @propery
+    @property
     def iteration(self):
         """The iteration the chain is currently at."""
         with self.open() as f:
@@ -172,10 +174,11 @@ class HDFStorage:
             g = f[self.name]
             ntot = g.attrs["iteration"] + ngrow
             g["chain"].resize(ntot, axis=0)
+            g["log_prob"].resize(ntot, axis=0)
             g["trials"].resize(ntot, axis=0)
             g["accepted"].resize(ntot, axis=0)
-            g["log_prob"].resize(ntot, axis=0)
             g["trial_log_prob"].resize(ntot, axis=0)
+
 
             if blobs:
                 has_blobs = g.attrs["has_blobs"]
@@ -200,7 +203,7 @@ class HDFStorage:
                 g.attrs["has_blobs"] = True
 
     def save_step(
-            self, coords, log_prob, blobs, truepos, trupeprob, accepted, random_state
+            self, coords, log_prob, blobs
     ):
         """Save a step to the file.
 
@@ -218,7 +221,7 @@ class HDFStorage:
         random_state :
             The current state of the random number generator.
         """
-        self._check(coords, log_prob, blobs, accepted)
+        self._check(coords, log_prob, blobs)
 
         with self.open("a") as f:
             g = f[self.name]
@@ -226,10 +229,8 @@ class HDFStorage:
 
             g["chain"][iteration, :, :] = coords
             g["log_prob"][iteration, :, :] = log_prob
-            g["trials"][iteration, :, :] = truepos
-            g["trial_log_prob"][iteration, :] = trueprob
 
-            if blobs[0]
+            if blobs[0]:
                 blobs = np.array(
                     [tuple(b[name] for name in g["blobs".dtype.names]) for b in blobs],
                     dtype = g["blobs".dtype],
@@ -244,7 +245,7 @@ class HDFStorage:
             g.attrs["iteration"] = iteration + 1
 
     def _check_blobs(self, blobs):
-        if self.has_blobs and bot blobs:
+        if self.has_blobs and not blobs:
             raise ValueError("inconsistent use of blobs")
         if self.iteration > 0 and blobs and not self.has_blobs:
             raise ValueError("inconsistent use of blobs.")
@@ -400,11 +401,11 @@ class HDFStorage:
         else:
             last.append(None)
 
-        return tuple(list)
+        return tuple(last)
 
-    def _check(self, coords, log_prob, blobs, accepted):
-
-        self._check_blobs(blobs[0])
+    def _check(self, coords, log_prob, blobs):
+        if blobs is not None:
+            self._check_blobs(blobs[0])
         nwalkers, ndim = self.shape
 
         if coords.shape != (nwalkers, ndim):
@@ -417,5 +418,3 @@ class HDFStorage:
             )
         if blobs and len(blobs) != nwalkers:
             raise ValueError("invalid blobs size, expected {0}".format(nwalkers))
-        if accepted.shape != (nwalkers,):
-            raise ValueError("invalid acceptance size; expected {0}".format(nwalkers))
