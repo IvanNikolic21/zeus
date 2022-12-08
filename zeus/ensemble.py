@@ -386,13 +386,12 @@ class EnsembleSampler:
             raise ValueError("At least one parameter value was infinite")
         if np.any(np.isnan(p)):
             raise ValueError("At least one parameter value was NaN")
-
         # Run the log-probability calculations (optionally in parallel).
         if self.vectorize:
             results = self.logprob_fn(p)
         else:
             results = list(self.distribute(self.logprob_fn, (p[i] for i in range(len(p)))))
-
+        
         try:
             log_prob = np.array([float(l[0]) for l in results])
             blob = [l[1:] for l in results]
@@ -462,12 +461,11 @@ class EnsembleSampler:
                 if self.blobs_dtype is not None:
                     start, log_prob0, rstate, blobs0 = last_sample
                 else:
-                    start, log_prob0, rstate = last_sample
+                    start, log_prob0, rstate, _ = last_sample
 
         if self.store_progress:
             self.storage.grow(nsteps, self.blobs_dtype)
-
-
+       
         for _ in self.sample(start,
                              log_prob0=log_prob0,
                              blobs0=blobs0,
@@ -522,7 +520,6 @@ class EnsembleSampler:
             self.distribute = map
         else:
             self.distribute = self.pool.map
-
         # Initialise ensemble of walkers
         logging.info('Initialising ensemble of %d walkers...', self.nwalkers)
         if start is not None:
@@ -541,7 +538,6 @@ class EnsembleSampler:
             blobs = self.state_blobs
         else:
             raise ValueError("Cannot have `start=None` if run_mcmc has never been called before.")
-
 
         if not np.all(np.isfinite(Z)):
             raise ValueError('Invalid walker initial positions! \n' +
@@ -580,8 +576,7 @@ class EnsembleSampler:
 
         # Initialise progress bar
         if progress:
-            t = tqdm(total=self.nsteps, desc='Sampling progress : ')
-
+            t = tqdm(total=self.nsteps, desc='Sampling progress : ') 
         # Main Loop
         for i in range(self.nsteps):
 
@@ -606,7 +601,7 @@ class EnsembleSampler:
 
                 # Compute directions
                 directions, tune_once = move.get_direction(X[inactive], self.mu)
-
+                
                 # Get Z0 = LogP(x0)
                 Z0 = Z[active] - np.random.exponential(size=int(self.nwalkers/2))
 
@@ -653,7 +648,7 @@ class EnsembleSampler:
 
                     X_L[mask_J] = directions[mask_J] * L[mask_J][:,np.newaxis] + X[active][mask_J]
                     X_R[mask_K] = directions[mask_K] * R[mask_K][:,np.newaxis] + X[active][mask_K]
-
+                    
                     if len(X_L[mask_J]) + len(X_R[mask_K]) < 1:
                         Z_L[mask_J] = np.array([])
                         Z_R[mask_K] = np.array([])

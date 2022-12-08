@@ -107,7 +107,7 @@ class HDFStorage:
             if name == "blobs" and not g.attrs["has_blobs"]:
                 return None
 
-            v = g[name][discard + thin-i : iteration : thin]
+            v = g[name][discard + thin -1 : iteration : thin]
             if flat:
                 s = list(v.shape[1:])
                 s[0] = np.prod(v.shape[:2])
@@ -221,6 +221,8 @@ class HDFStorage:
         random_state :
             The current state of the random number generator.
         """
+        if not hasattr(blobs, '__len__'):
+            blobs = [blobs] * np.shape(coords)[0]
         self._check(coords, log_prob, blobs)
 
         with self.open("a") as f:
@@ -228,7 +230,7 @@ class HDFStorage:
             iteration = g.attrs["iteration"]
 
             g["chain"][iteration, :, :] = coords
-            g["log_prob"][iteration, :, :] = log_prob
+            g["log_prob"][iteration, :] = log_prob
 
             if blobs[0]:
                 blobs = np.array(
@@ -237,10 +239,8 @@ class HDFStorage:
                 )
                 g["blobs"][iteration, ...] = blobs
 
-            g["accepted"][iteration, :] = accepted
-
-            for i, v in enumerate(random_state):
-                g.attrs["random_state_{0}".format(i)] = v
+            #for i, v in enumerate(random_state):
+            #    g.attrs["random_state_{0}".format(i)] = v
 
             g.attrs["iteration"] = iteration + 1
 
@@ -269,7 +269,7 @@ class HDFStorage:
         array[..., nwalkers]:
             The chain of blobs.
         """
-        return self.get_value("blobs", **kwargs)
+        return self.get_value("chain", **kwargs)
 
     def get_blobs(self, **kwargs):
         r"""
@@ -404,8 +404,7 @@ class HDFStorage:
         return tuple(last)
 
     def _check(self, coords, log_prob, blobs):
-        if blobs is not None:
-            self._check_blobs(blobs[0])
+        self._check_blobs(blobs[0])
         nwalkers, ndim = self.shape
 
         if coords.shape != (nwalkers, ndim):
