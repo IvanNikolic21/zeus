@@ -457,6 +457,7 @@ class EnsembleSampler:
             if start is not None:
                 raise ValueError("Given a starting point, while continue sampling")
             else:
+                print("Am I sampling again?")
                 last_sample =  self.storage.get_last_sample()
                 if self.blobs_dtype is not None:
                     start, log_prob0, rstate, blobs0 = last_sample
@@ -748,10 +749,9 @@ class EnsembleSampler:
             # Save samples
             if (i+1) % self.ncheckpoint == 0:
                 self.samples.save(X, Z, blobs)
-                if self.store_progress:
-                    self.storage.save_step(
-                        X, Z, blobs,
-                    )
+            print("Is it time to save?", i, self.save_after_iter, self.store_progress)
+            if (i+1) % self.save_after_iter == 0 and self.store_progress:
+                self.storage.save_step( X, Z, blobs)
 
             # Update progress bar
             if progress:
