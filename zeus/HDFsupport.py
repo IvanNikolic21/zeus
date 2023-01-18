@@ -51,7 +51,7 @@ class HDFStorage:
             g.attrs["iteration"] = 0
 
             g.create_dataset(
-                "accepted", (0,nwalkers), maxshape=(None,nwalkers), dtype=np.int
+                "accepted", (0,nwalkers), maxshape=(None,nwalkers), dtype=np.int64
             )
             g.create_dataset(
                 "chain",
