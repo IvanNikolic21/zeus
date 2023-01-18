@@ -10,6 +10,7 @@ class HDFStorage:
             raise ImportError("You must install h5py to use HDFBackend.")
         self.filename = filename
         self.name = name
+        print("Hello")
 
     @property
     def initialized(self):
